@@ -2,15 +2,16 @@
 import VaporTesting
 import Testing
 
-@Suite("App Tests")
-struct HomeroNotificationsTests {
-@Test("Test Hello World Route")
-    func helloWorld() async throws {
-        try await withApp(configure: configure) { app in
-            try await app.testing().test(.GET, "hello", afterResponse: { res async in
-                #expect(res.status == .ok)
-                #expect(res.body.string == "Hello, world!")
-            })
+@Test("Health check")
+func healthCheck() async throws {
+    try await withApp(configure: configure) { app in
+        try await app.testing().test(.GET, "health") { response async throws in
+            #expect(response.status == .ok)
+
+            let body = try response.content.decode(HealthResponse.self)
+            #expect(body.status == "ok")
         }
     }
 }
+
+
