@@ -1,3 +1,4 @@
+import APNSCore
 import Foundation
 import Vapor
 
@@ -50,6 +51,17 @@ struct ForumEventController: Sendable {
         ]
       )
       return Response(status: .accepted)
+    } catch let error as APNSError {
+      request.logger.error(
+        "APNs delivery failed",
+        metadata: [
+          "event_id": "\(event.eventID)",
+          "error_type": "\(String(reflecting: type(of: error)))",
+          "apns_status": "\(error.responseStatus)",
+          "apns_reason": "\(error.reason?.reason ?? "unavailable")",
+        ]
+      )
+      throw Abort(.badGateway, reason: "Unable to deliver the notification to APNs")
     } catch {
       request.logger.error(
         "APNs delivery failed",
