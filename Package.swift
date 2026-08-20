@@ -9,6 +9,8 @@ let package = Package(
     dependencies: [
         // 💧 A server-side Swift web framework.
         .package(url: "https://github.com/vapor/vapor.git", from: "4.121.4"),
+        // 📣 Vapor integration for the Apple Push Notification service.
+        .package(url: "https://github.com/vapor/apns.git", from: "5.0.0"),
         // 🔵 Non-blocking, event-driven networking for Swift. Used for custom executors
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.101.0"),
     ],
@@ -17,6 +19,7 @@ let package = Package(
             name: "HomeroNotifications",
             dependencies: [
                 .product(name: "Vapor", package: "vapor"),
+                .product(name: "VaporAPNS", package: "apns"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
             ],
