@@ -1,11 +1,22 @@
 import APNS
 import APNSCore
 import Foundation
+import Fluent
+import FluentSQLiteDriver
 import Vapor
 import VaporAPNS
 
 /// configures your application
 func configure(_ app: Application) async throws {
+    if app.environment == .testing {
+        app.databases.use(.sqlite(.memory), as: .sqlite)
+    } else {
+        let databasePath = Environment.get("DATABASE_PATH") ?? "homero-notifications.sqlite"
+        app.databases.use(.sqlite(.file(databasePath)), as: .sqlite)
+    }
+    app.migrations.add(CreateRegisteredDevice())
+    try await app.autoMigrate()
+
     app.forumPushSender = try await makeForumPushSender(for: app)
 
     try routes(app)

@@ -80,6 +80,42 @@ Resultados esperados:
 
 Os logs incluem o `eventId`, o tipo do evento e o identificador de resposta do APNs. Eles nao incluem o token do dispositivo, a chave privada ou outras credenciais.
 
+## Registro de dispositivos
+
+O servico mantem os dispositivos em SQLite. Por padrao, o banco fica em
+`homero-notifications.sqlite`; defina `DATABASE_PATH` para usar outro caminho.
+
+Registre ou atualize um dispositivo com:
+
+```bash
+curl -i \
+  -X PUT http://127.0.0.1:8080/devices \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "userId": "9949099d-ab2f-4103-af43-b9954057dbef",
+    "deviceToken": "APNS_DEVICE_TOKEN",
+    "environment": "sandbox"
+  }'
+```
+
+O mesmo token pertence a apenas um usuario. Repetir o registro atualiza o
+usuario e o ambiente sem criar uma duplicata. Um usuario pode possuir varios
+tokens.
+
+Remova a associacao no logout com:
+
+```bash
+curl -i \
+  -X DELETE http://127.0.0.1:8080/devices \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "userId": "9949099d-ab2f-4103-af43-b9954057dbef",
+    "deviceToken": "APNS_DEVICE_TOKEN"
+  }'
+```
+
+O token do dispositivo nunca e retornado pela API nem incluido nos logs.
+
 ## Testes
 
 ```bash

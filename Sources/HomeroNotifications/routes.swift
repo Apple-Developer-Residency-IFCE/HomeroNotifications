@@ -20,4 +20,12 @@ func routes(_ app: Application) throws {
     app.post("events", "forum") { request async throws -> Response in
         try await ForumEventController().handle(request)
     }
+
+    app.put("devices") { request async throws -> RegisteredDeviceDTO in
+        try await DeviceController().register(request)
+    }
+
+    app.delete("devices") { request async throws -> HTTPStatus in
+        try await DeviceController().remove(request)
+    }
 }
