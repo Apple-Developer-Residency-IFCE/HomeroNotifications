@@ -60,8 +60,7 @@ curl -i \
       "name": "Kaique"
     },
     "recipient": {
-      "userId": "9949099d-ab2f-4103-af43-b9954057dbef",
-      "deviceToken": "APNS_DEVICE_TOKEN"
+      "userId": "9949099d-ab2f-4103-af43-b9954057dbef"
     },
     "target": {
       "topicId": "373ce888-74c8-437e-8a61-485910713916",
@@ -73,12 +72,12 @@ curl -i \
 Resultados esperados:
 
 - `202 Accepted`: o APNs aceitou a solicitacao.
-- `204 No Content`: ator e destinatario sao o mesmo Homero User ID.
+- `204 No Content`: ator e destinatario sao o mesmo Homero User ID ou o destinatario nao possui dispositivos registrados.
 - `400 Bad Request`: o JSON ou um campo obrigatorio e invalido.
 - `422 Unprocessable Entity`: o tipo de evento existe no dominio, mas ainda nao foi conectado.
 - `502 Bad Gateway`: o cliente nao esta configurado ou o envio ao APNs falhou.
 
-Os logs incluem o `eventId`, o tipo do evento e o identificador de resposta do APNs. Eles nao incluem o token do dispositivo, a chave privada ou outras credenciais.
+O servico resolve todos os aparelhos do destinatario pelo `recipient.userId` e tenta entregar a notificacao a cada um deles. Os logs incluem o `eventId`, o tipo do evento e o identificador de resposta do APNs. Eles nao incluem o token do dispositivo, a chave privada ou outras credenciais.
 
 ## Registro de dispositivos
 

@@ -1,3 +1,4 @@
+import Fluent
 import Foundation
 import Testing
 import Vapor
@@ -13,6 +14,7 @@ struct ForumEventTests {
 
     try await withApp(configure: configure) { app in
       app.forumPushSender = sender
+      try await registerDevice(on: app.db)
 
       try await app.testing().test(.POST, "/events/forum") { request in
         setJSONBody(eventJSON(), on: &request)
@@ -29,6 +31,64 @@ struct ForumEventTests {
       #expect(send.message.body == "Kaique curtiu seu topico")
       #expect(send.message.type == .topicLiked)
       #expect(send.message.topicID == topicID)
+    }
+  }
+
+  @Test("An event is sent to every registered device belonging to the recipient")
+  func eventIsSentToEveryRecipientDevice() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+      try await registerDevice(on: app.db, deviceToken: secondDeviceToken)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .accepted)
+      }
+
+      let sends = await sender.recordedSends()
+      #expect(Set(sends.map(\.deviceToken)) == Set([defaultDeviceToken, secondDeviceToken]))
+    }
+  }
+
+  @Test("A partial APNs failure is accepted when another device succeeds")
+  func partialDeliveryIsAccepted() async throws {
+    let sender = RecordingForumPushSender(failingDeviceTokens: [defaultDeviceToken])
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+      try await registerDevice(on: app.db, deviceToken: secondDeviceToken)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .accepted)
+      }
+
+      let sends = await sender.recordedSends()
+      #expect(sends.count == 2)
+    }
+  }
+
+  @Test("An event for a recipient without devices is ignored")
+  func recipientWithoutDevicesIsIgnored() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .noContent)
+      }
+
+      let sends = await sender.recordedSends()
+      #expect(sends.isEmpty)
     }
   }
 
@@ -74,12 +134,12 @@ struct ForumEventTests {
     let invalidEvents = [
       eventJSON(includeActor: false),
       eventJSON(includeRecipient: false),
-      eventJSON(deviceToken: nil),
       eventJSON(includeTarget: false),
     ]
 
     try await withApp(configure: configure) { app in
       app.forumPushSender = sender
+      try await registerDevice(on: app.db)
 
       for json in invalidEvents {
         try await app.testing().test(.POST, "/events/forum") { request in
@@ -100,6 +160,7 @@ struct ForumEventTests {
 
     try await withApp(configure: configure) { app in
       app.forumPushSender = sender
+      try await registerDevice(on: app.db)
 
       try await app.testing().test(.POST, "/events/forum") { request in
         setJSONBody(eventJSON(), on: &request)
@@ -137,11 +198,15 @@ private struct RecordedForumPush: Sendable {
 }
 
 private actor RecordingForumPushSender: ForumPushSending {
-  private let shouldFail: Bool
+  private let failingDeviceTokens: Set<String>
   private var sends: [RecordedForumPush] = []
 
   init(shouldFail: Bool = false) {
-    self.shouldFail = shouldFail
+    self.failingDeviceTokens = shouldFail ? [defaultDeviceToken] : []
+  }
+
+  init(failingDeviceTokens: Set<String>) {
+    self.failingDeviceTokens = failingDeviceTokens
   }
 
   func send(
@@ -151,7 +216,7 @@ private actor RecordingForumPushSender: ForumPushSending {
   ) async throws -> ForumPushDeliveryReceipt {
     sends.append(RecordedForumPush(message: message, deviceToken: deviceToken))
 
-    if shouldFail {
+    if failingDeviceTokens.contains(deviceToken) {
       throw StubAPNSError()
     }
 
@@ -170,11 +235,11 @@ private let actorUserID = UUID(uuidString: "55211d61-078d-4ad9-befc-362c088ddbf9
 private let defaultRecipientUserID = UUID(uuidString: "9949099d-ab2f-4103-af43-b9954057dbef")!
 private let topicID = UUID(uuidString: "373ce888-74c8-437e-8a61-485910713916")!
 private let defaultDeviceToken = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+private let secondDeviceToken = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 
 private func eventJSON(
   type: String = "TOPIC_LIKED",
   recipientUserID: UUID = defaultRecipientUserID,
-  deviceToken: String? = defaultDeviceToken,
   includeActor: Bool = true,
   includeRecipient: Bool = true,
   includeTarget: Bool = true
@@ -192,13 +257,9 @@ private func eventJSON(
   }
 
   if includeRecipient {
-    var recipientFields = [
-      "\"userId\":\"\(recipientUserID.uuidString.lowercased())\""
-    ]
-    if let deviceToken {
-      recipientFields.append("\"deviceToken\":\"\(deviceToken)\"")
-    }
-    fields.append("\"recipient\":{\(recipientFields.joined(separator: ","))}")
+    fields.append(
+      "\"recipient\":{\"userId\":\"\(recipientUserID.uuidString.lowercased())\"}"
+    )
   }
 
   if includeTarget {
@@ -213,4 +274,15 @@ private func eventJSON(
 private func setJSONBody(_ json: String, on request: inout TestingHTTPRequest) {
   request.headers.contentType = .json
   request.body.writeString(json)
+}
+
+private func registerDevice(
+  on database: any Database,
+  deviceToken: String = defaultDeviceToken
+) async throws {
+  try await RegisteredDevice(
+    userID: defaultRecipientUserID,
+    deviceToken: deviceToken,
+    environment: .sandbox
+  ).create(on: database)
 }

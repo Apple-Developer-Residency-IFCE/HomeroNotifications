@@ -14,11 +14,9 @@ struct ForumEventDTO: Content, Equatable, Sendable {
 
   struct Recipient: Codable, Equatable, Sendable {
     let userID: UUID
-    let deviceToken: String
 
     enum CodingKeys: String, CodingKey {
       case userID = "userId"
-      case deviceToken
     }
   }
 
@@ -51,10 +49,6 @@ struct ForumEventDTO: Content, Equatable, Sendable {
   func validate() throws {
     guard !actor.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       throw Abort(.badRequest, reason: "actor.name must not be empty")
-    }
-
-    guard !recipient.deviceToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      throw Abort(.badRequest, reason: "recipient.deviceToken must not be empty")
     }
 
     guard !target.topicTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
