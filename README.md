@@ -43,6 +43,16 @@ O servidor inicia por padrao em `http://127.0.0.1:8080`. Verifique-o com:
 curl -i http://127.0.0.1:8080/health
 ```
 
+## Documentacao da API
+
+Com o servidor em execucao, acesse a documentacao interativa em:
+
+```text
+http://127.0.0.1:8080/swagger
+```
+
+O Swagger UI carrega seus arquivos estaticos por CDN, portanto a interface requer acesso a internet.
+
 ## Enviar um evento de teste
 
 Tipos de evento atualmente aceitos:

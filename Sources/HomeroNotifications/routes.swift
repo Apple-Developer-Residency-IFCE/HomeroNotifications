@@ -5,6 +5,8 @@ struct HealthResponse: Content {
 }
 
 func routes(_ app: Application) throws {
+    let documentation = APIDocumentationController()
+
     app.get { _ async in
         "It works!"
     }
@@ -16,6 +18,8 @@ func routes(_ app: Application) throws {
     app.get("health") { _ async -> HealthResponse in
         HealthResponse(status: "ok")
     }
+
+    app.get("swagger", use: documentation.swaggerUI)
 
     app.post("events", "forum") { request async throws -> Response in
         try await ForumEventController().handle(request)
