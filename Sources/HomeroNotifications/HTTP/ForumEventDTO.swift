@@ -13,6 +13,8 @@ struct ForumEventDTO: Content, Equatable, Sendable {
   }
 
   struct Recipient: Codable, Equatable, Sendable {
+    /// The user directly affected by the event: the topic author for topic
+    /// events, or the comment author for comment events.
     let userID: UUID
 
     enum CodingKeys: String, CodingKey {

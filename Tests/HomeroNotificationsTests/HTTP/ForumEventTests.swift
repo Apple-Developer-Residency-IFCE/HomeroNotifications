@@ -62,11 +62,17 @@ struct ForumEventTests {
     try await withApp(configure: configure) { app in
       app.forumPushSender = sender
       try await registerDevice(on: app.db)
+      try await registerDevice(
+        on: app.db,
+        userID: commentRecipientUserID,
+        deviceToken: commentRecipientDeviceToken
+      )
 
       try await app.testing().test(.POST, "/events/forum") { request in
         setJSONBody(
           eventJSON(
             type: "COMMENT_REPLIED",
+            recipientUserID: commentRecipientUserID,
             commentID: commentID,
             parentCommentID: parentCommentID
           ),
@@ -76,8 +82,11 @@ struct ForumEventTests {
         #expect(response.status == .accepted)
       }
 
-      let send = try #require(await sender.recordedSends().first)
-      #expect(send.message.body == "Kaique respondeu um comentario no seu topico")
+      let sends = await sender.recordedSends()
+      let send = try #require(sends.first)
+      #expect(sends.count == 1)
+      #expect(send.deviceToken == commentRecipientDeviceToken)
+      #expect(send.message.body == "Kaique respondeu seu comentario")
       #expect(send.message.type == .commentReplied)
       #expect(send.message.commentID == commentID)
       #expect(send.message.parentCommentID == parentCommentID)
@@ -109,15 +118,30 @@ struct ForumEventTests {
     try await withApp(configure: configure) { app in
       app.forumPushSender = sender
       try await registerDevice(on: app.db)
+      try await registerDevice(
+        on: app.db,
+        userID: commentRecipientUserID,
+        deviceToken: commentRecipientDeviceToken
+      )
 
       try await app.testing().test(.POST, "/events/forum") { request in
-        setJSONBody(eventJSON(type: "COMMENT_LIKED", commentID: commentID), on: &request)
+        setJSONBody(
+          eventJSON(
+            type: "COMMENT_LIKED",
+            recipientUserID: commentRecipientUserID,
+            commentID: commentID
+          ),
+          on: &request
+        )
       } afterResponse: { response in
         #expect(response.status == .accepted)
       }
 
-      let send = try #require(await sender.recordedSends().first)
-      #expect(send.message.body == "Kaique curtiu um comentario no seu topico")
+      let sends = await sender.recordedSends()
+      let send = try #require(sends.first)
+      #expect(sends.count == 1)
+      #expect(send.deviceToken == commentRecipientDeviceToken)
+      #expect(send.message.body == "Kaique curtiu seu comentario")
       #expect(send.message.type == .commentLiked)
       #expect(send.message.commentID == commentID)
     }
@@ -340,11 +364,13 @@ private struct StubAPNSError: Error {}
 private let eventID = UUID(uuidString: "2a8f29c1-3447-4c11-b0ea-fc26950f1384")!
 private let actorUserID = UUID(uuidString: "55211d61-078d-4ad9-befc-362c088ddbf9")!
 private let defaultRecipientUserID = UUID(uuidString: "9949099d-ab2f-4103-af43-b9954057dbef")!
+private let commentRecipientUserID = UUID(uuidString: "a049099d-ab2f-4103-af43-b9954057dbef")!
 private let topicID = UUID(uuidString: "373ce888-74c8-437e-8a61-485910713916")!
 private let commentID = UUID(uuidString: "473ce888-74c8-437e-8a61-485910713917")!
 private let parentCommentID = UUID(uuidString: "573ce888-74c8-437e-8a61-485910713918")!
 private let defaultDeviceToken = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 private let secondDeviceToken = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+private let commentRecipientDeviceToken = "1111111111111111111111111111111111111111111111111111111111111111"
 
 private func eventJSON(
   type: String = "TOPIC_LIKED",
@@ -397,10 +423,11 @@ private func setJSONBody(_ json: String, on request: inout TestingHTTPRequest) {
 
 private func registerDevice(
   on database: any Database,
+  userID: UUID = defaultRecipientUserID,
   deviceToken: String = defaultDeviceToken
 ) async throws {
   try await RegisteredDevice(
-    userID: defaultRecipientUserID,
+    userID: userID,
     deviceToken: deviceToken,
     environment: .sandbox
   ).create(on: database)

@@ -57,10 +57,16 @@ O Swagger UI carrega seus arquivos estaticos por CDN, portanto a interface reque
 
 Tipos de evento atualmente aceitos:
 
-- `TOPIC_LIKED`: o topico recebeu uma curtida.
-- `TOPIC_COMMENTED`: o topico recebeu uma resposta.
-- `COMMENT_REPLIED`: um comentario do topico recebeu uma resposta.
-- `COMMENT_LIKED`: um comentario do topico recebeu uma curtida.
+- `TOPIC_LIKED`: o topico recebeu uma curtida; notifica o autor do topico.
+- `TOPIC_COMMENTED`: o topico recebeu uma resposta; notifica o autor do topico.
+- `COMMENT_REPLIED`: um comentario recebeu uma resposta; notifica o autor do
+  comentario respondido.
+- `COMMENT_LIKED`: um comentario recebeu uma curtida; notifica o autor do
+  comentario curtido.
+
+O produtor do evento deve preencher `recipient.userId` de acordo com essas
+regras. Curtidas e respostas em comentarios nao notificam o autor do topico,
+exceto quando ele tambem for o autor do comentario afetado.
 
 Substitua `APNS_DEVICE_TOKEN` pelo token hexadecimal registrado pelo aplicativo:
 

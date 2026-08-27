@@ -105,7 +105,11 @@ private enum OpenAPIDocument {
           tags: [Forum events]
           summary: Entrega uma notificacao de evento do forum
           operationId: publishForumEvent
-          description: O recipient deve ser sempre o autor do topico. Eventos cujo ator seja o destinatario sao ignorados.
+          description: >-
+            O recipient depende do tipo do evento: autor do topico para
+            TOPIC_LIKED e TOPIC_COMMENTED; autor do comentario respondido para
+            COMMENT_REPLIED; autor do comentario curtido para COMMENT_LIKED.
+            Eventos cujo ator seja o destinatario sao ignorados.
           requestBody:
             required: true
             content:
@@ -218,6 +222,9 @@ private enum OpenAPIDocument {
         ForumRecipient:
           type: object
           required: [userId]
+          description: >-
+            Usuario diretamente afetado pelo evento, conforme as regras de
+            destinatario de cada tipo de notificacao.
           properties:
             userId:
               type: string
