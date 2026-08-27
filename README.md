@@ -50,6 +50,7 @@ Tipos de evento atualmente aceitos:
 - `TOPIC_LIKED`: o topico recebeu uma curtida.
 - `TOPIC_COMMENTED`: o topico recebeu uma resposta.
 - `COMMENT_REPLIED`: um comentario do topico recebeu uma resposta.
+- `COMMENT_LIKED`: um comentario do topico recebeu uma curtida.
 
 Substitua `APNS_DEVICE_TOKEN` pelo token hexadecimal registrado pelo aplicativo:
 
@@ -80,7 +81,6 @@ Resultados esperados:
 - `202 Accepted`: o APNs aceitou a solicitacao.
 - `204 No Content`: ator e destinatario sao o mesmo Homero User ID ou o destinatario nao possui dispositivos registrados.
 - `400 Bad Request`: o JSON ou um campo obrigatorio e invalido.
-- `422 Unprocessable Entity`: o tipo de evento existe no dominio, mas ainda nao foi conectado.
 - `502 Bad Gateway`: o cliente nao esta configurado ou o envio ao APNs falhou.
 
 O servico resolve todos os aparelhos do destinatario pelo `recipient.userId` e tenta entregar a notificacao a cada um deles. Os logs incluem o `eventId`, o tipo do evento e o identificador de resposta do APNs. Eles nao incluem o token do dispositivo, a chave privada ou outras credenciais.

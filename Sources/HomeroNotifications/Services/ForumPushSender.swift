@@ -24,7 +24,7 @@ struct ForumPushMessage: Equatable, Sendable {
     case .commentReplied:
       "\(event.actor.name) respondeu um comentario no seu topico"
     case .commentLiked:
-      ""
+      "\(event.actor.name) curtiu um comentario no seu topico"
     }
     self.type = event.type
     self.topicID = event.target.topicID

@@ -102,6 +102,45 @@ struct ForumEventTests {
     }
   }
 
+  @Test("A valid COMMENT_LIKED event is mapped and sent")
+  func validCommentLikedEventIsSent() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(type: "COMMENT_LIKED", commentID: commentID), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .accepted)
+      }
+
+      let send = try #require(await sender.recordedSends().first)
+      #expect(send.message.body == "Kaique curtiu um comentario no seu topico")
+      #expect(send.message.type == .commentLiked)
+      #expect(send.message.commentID == commentID)
+    }
+  }
+
+  @Test("COMMENT_LIKED requires the comment identifier")
+  func commentLikedRequiresCommentID() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(type: "COMMENT_LIKED"), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .badRequest)
+      }
+
+      #expect(await sender.recordedSends().isEmpty)
+    }
+  }
+
   @Test("An event is sent to every registered device belonging to the recipient")
   func eventIsSentToEveryRecipientDevice() async throws {
     let sender = RecordingForumPushSender()
@@ -178,17 +217,17 @@ struct ForumEventTests {
     }
   }
 
-  @Test("A known but unsupported event type returns 422 without sending")
-  func unsupportedEventIsRejected() async throws {
+  @Test("An unknown event type returns 400 without sending")
+  func unknownEventIsRejected() async throws {
     let sender = RecordingForumPushSender()
 
     try await withApp(configure: configure) { app in
       app.forumPushSender = sender
 
       try await app.testing().test(.POST, "/events/forum") { request in
-        setJSONBody(eventJSON(type: "COMMENT_LIKED"), on: &request)
+        setJSONBody(eventJSON(type: "UNKNOWN"), on: &request)
       } afterResponse: { response in
-        #expect(response.status == .unprocessableEntity)
+        #expect(response.status == .badRequest)
       }
 
       let sends = await sender.recordedSends()

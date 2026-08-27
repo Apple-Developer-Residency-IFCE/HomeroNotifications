@@ -62,5 +62,9 @@ struct ForumEventDTO: Content, Equatable, Sendable {
     if type == .commentReplied, target.parentCommentID == nil {
       throw Abort(.badRequest, reason: "target.parentCommentId is required for COMMENT_REPLIED")
     }
+
+    if type == .commentLiked, target.commentID == nil {
+      throw Abort(.badRequest, reason: "target.commentId is required for COMMENT_LIKED")
+    }
   }
 }

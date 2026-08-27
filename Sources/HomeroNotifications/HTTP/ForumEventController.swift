@@ -16,17 +16,6 @@ struct ForumEventController: Sendable {
       ]
     )
 
-    guard [.topicLiked, .topicCommented, .commentReplied].contains(event.type) else {
-      request.logger.notice(
-        "Unsupported forum event ignored",
-        metadata: [
-          "event_id": "\(event.eventID)",
-          "type": "\(event.type.rawValue)",
-        ]
-      )
-      throw Abort(.unprocessableEntity, reason: "Forum event type is not supported yet")
-    }
-
     guard event.actor.userID != event.recipient.userID else {
       request.logger.info(
         "Self-authored forum event ignored",
