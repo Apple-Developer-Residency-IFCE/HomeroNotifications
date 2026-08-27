@@ -2,9 +2,12 @@ Packages
 .build
 xcuserdata
 *.xcodeproj
+*.xcworkspace/
+Derived/
 DerivedData/
 .DS_Store
 db.sqlite
+*.sqlite
 .swiftpm
 .env
 .env.*
