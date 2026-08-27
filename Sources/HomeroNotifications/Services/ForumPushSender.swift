@@ -10,6 +10,8 @@ struct ForumPushMessage: Equatable, Sendable {
   let body: String
   let type: ForumNotificationType
   let topicID: UUID
+  let commentID: UUID?
+  let parentCommentID: UUID?
 
   init(event: ForumEventDTO) {
     self.eventID = event.eventID
@@ -19,11 +21,15 @@ struct ForumPushMessage: Equatable, Sendable {
       "\(event.actor.name) curtiu seu topico"
     case .topicCommented:
       "\(event.actor.name) respondeu seu topico"
-    case .commentReplied, .commentLiked:
+    case .commentReplied:
+      "\(event.actor.name) respondeu um comentario no seu topico"
+    case .commentLiked:
       ""
     }
     self.type = event.type
     self.topicID = event.target.topicID
+    self.commentID = event.target.commentID
+    self.parentCommentID = event.target.parentCommentID
   }
 
   func apnsNotification(topic: String) -> APNSAlertNotification<ForumPushPayload> {
@@ -35,7 +41,12 @@ struct ForumPushMessage: Equatable, Sendable {
       expiration: .immediately,
       priority: .immediately,
       topic: topic,
-      payload: ForumPushPayload(type: type, topicID: topicID.uuidString.lowercased()),
+      payload: ForumPushPayload(
+        type: type,
+        topicID: topicID.uuidString.lowercased(),
+        commentID: commentID?.uuidString.lowercased(),
+        parentCommentID: parentCommentID?.uuidString.lowercased()
+      ),
       sound: .default,
       apnsID: eventID
     )
@@ -45,10 +56,14 @@ struct ForumPushMessage: Equatable, Sendable {
 struct ForumPushPayload: Codable, Equatable, Sendable {
   let type: ForumNotificationType
   let topicID: String
+  let commentID: String?
+  let parentCommentID: String?
 
   enum CodingKeys: String, CodingKey {
     case type
     case topicID = "topicId"
+    case commentID = "commentId"
+    case parentCommentID = "parentCommentId"
   }
 }
 

@@ -55,6 +55,53 @@ struct ForumEventTests {
     }
   }
 
+  @Test("A valid COMMENT_REPLIED event is mapped and sent")
+  func validCommentRepliedEventIsSent() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(
+          eventJSON(
+            type: "COMMENT_REPLIED",
+            commentID: commentID,
+            parentCommentID: parentCommentID
+          ),
+          on: &request
+        )
+      } afterResponse: { response in
+        #expect(response.status == .accepted)
+      }
+
+      let send = try #require(await sender.recordedSends().first)
+      #expect(send.message.body == "Kaique respondeu um comentario no seu topico")
+      #expect(send.message.type == .commentReplied)
+      #expect(send.message.commentID == commentID)
+      #expect(send.message.parentCommentID == parentCommentID)
+    }
+  }
+
+  @Test("COMMENT_REPLIED requires the original comment identifier")
+  func commentRepliedRequiresParentCommentID() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(type: "COMMENT_REPLIED"), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .badRequest)
+      }
+
+      #expect(await sender.recordedSends().isEmpty)
+    }
+  }
+
   @Test("An event is sent to every registered device belonging to the recipient")
   func eventIsSentToEveryRecipientDevice() async throws {
     let sender = RecordingForumPushSender()
@@ -139,7 +186,7 @@ struct ForumEventTests {
       app.forumPushSender = sender
 
       try await app.testing().test(.POST, "/events/forum") { request in
-        setJSONBody(eventJSON(type: "COMMENT_REPLIED"), on: &request)
+        setJSONBody(eventJSON(type: "COMMENT_LIKED"), on: &request)
       } afterResponse: { response in
         #expect(response.status == .unprocessableEntity)
       }
@@ -255,12 +302,16 @@ private let eventID = UUID(uuidString: "2a8f29c1-3447-4c11-b0ea-fc26950f1384")!
 private let actorUserID = UUID(uuidString: "55211d61-078d-4ad9-befc-362c088ddbf9")!
 private let defaultRecipientUserID = UUID(uuidString: "9949099d-ab2f-4103-af43-b9954057dbef")!
 private let topicID = UUID(uuidString: "373ce888-74c8-437e-8a61-485910713916")!
+private let commentID = UUID(uuidString: "473ce888-74c8-437e-8a61-485910713917")!
+private let parentCommentID = UUID(uuidString: "573ce888-74c8-437e-8a61-485910713918")!
 private let defaultDeviceToken = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 private let secondDeviceToken = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 
 private func eventJSON(
   type: String = "TOPIC_LIKED",
   recipientUserID: UUID = defaultRecipientUserID,
+  commentID: UUID? = nil,
+  parentCommentID: UUID? = nil,
   includeActor: Bool = true,
   includeRecipient: Bool = true,
   includeTarget: Bool = true
@@ -284,9 +335,17 @@ private func eventJSON(
   }
 
   if includeTarget {
-    fields.append(
-      "\"target\":{\"topicId\":\"\(topicID.uuidString.lowercased())\",\"topicTitle\":\"Criando um novo topico\"}"
-    )
+    var targetFields = [
+      "\"topicId\":\"\(topicID.uuidString.lowercased())\"",
+      "\"topicTitle\":\"Criando um novo topico\"",
+    ]
+    if let commentID {
+      targetFields.append("\"commentId\":\"\(commentID.uuidString.lowercased())\"")
+    }
+    if let parentCommentID {
+      targetFields.append("\"parentCommentId\":\"\(parentCommentID.uuidString.lowercased())\"")
+    }
+    fields.append("\"target\":{\(targetFields.joined(separator: ","))}")
   }
 
   return "{\(fields.joined(separator: ","))}"

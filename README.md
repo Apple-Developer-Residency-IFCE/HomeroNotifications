@@ -49,6 +49,7 @@ Tipos de evento atualmente aceitos:
 
 - `TOPIC_LIKED`: o topico recebeu uma curtida.
 - `TOPIC_COMMENTED`: o topico recebeu uma resposta.
+- `COMMENT_REPLIED`: um comentario do topico recebeu uma resposta.
 
 Substitua `APNS_DEVICE_TOKEN` pelo token hexadecimal registrado pelo aplicativo:
 

@@ -23,10 +23,14 @@ struct ForumEventDTO: Content, Equatable, Sendable {
   struct Target: Codable, Equatable, Sendable {
     let topicID: UUID
     let topicTitle: String
+    let commentID: UUID?
+    let parentCommentID: UUID?
 
     enum CodingKeys: String, CodingKey {
       case topicID = "topicId"
       case topicTitle
+      case commentID = "commentId"
+      case parentCommentID = "parentCommentId"
     }
   }
 
@@ -53,6 +57,10 @@ struct ForumEventDTO: Content, Equatable, Sendable {
 
     guard !target.topicTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       throw Abort(.badRequest, reason: "target.topicTitle must not be empty")
+    }
+
+    if type == .commentReplied, target.parentCommentID == nil {
+      throw Abort(.badRequest, reason: "target.parentCommentId is required for COMMENT_REPLIED")
     }
   }
 }
