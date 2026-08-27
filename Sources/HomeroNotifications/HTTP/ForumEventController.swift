@@ -16,7 +16,7 @@ struct ForumEventController: Sendable {
       ]
     )
 
-    guard event.type == .topicLiked else {
+    guard [.topicLiked, .topicCommented].contains(event.type) else {
       request.logger.notice(
         "Unsupported forum event ignored",
         metadata: [

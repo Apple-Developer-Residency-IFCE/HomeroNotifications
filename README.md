@@ -45,6 +45,11 @@ curl -i http://127.0.0.1:8080/health
 
 ## Enviar um evento de teste
 
+Tipos de evento atualmente aceitos:
+
+- `TOPIC_LIKED`: o topico recebeu uma curtida.
+- `TOPIC_COMMENTED`: o topico recebeu uma resposta.
+
 Substitua `APNS_DEVICE_TOKEN` pelo token hexadecimal registrado pelo aplicativo:
 
 ```bash

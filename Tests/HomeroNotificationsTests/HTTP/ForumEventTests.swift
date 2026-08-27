@@ -34,6 +34,27 @@ struct ForumEventTests {
     }
   }
 
+  @Test("A valid TOPIC_COMMENTED event is mapped and sent")
+  func validTopicCommentedEventIsSent() async throws {
+    let sender = RecordingForumPushSender()
+
+    try await withApp(configure: configure) { app in
+      app.forumPushSender = sender
+      try await registerDevice(on: app.db)
+
+      try await app.testing().test(.POST, "/events/forum") { request in
+        setJSONBody(eventJSON(type: "TOPIC_COMMENTED"), on: &request)
+      } afterResponse: { response in
+        #expect(response.status == .accepted)
+      }
+
+      let send = try #require(await sender.recordedSends().first)
+      #expect(send.message.body == "Kaique respondeu seu topico")
+      #expect(send.message.type == .topicCommented)
+      #expect(send.message.topicID == topicID)
+    }
+  }
+
   @Test("An event is sent to every registered device belonging to the recipient")
   func eventIsSentToEveryRecipientDevice() async throws {
     let sender = RecordingForumPushSender()
@@ -118,7 +139,7 @@ struct ForumEventTests {
       app.forumPushSender = sender
 
       try await app.testing().test(.POST, "/events/forum") { request in
-        setJSONBody(eventJSON(type: "TOPIC_COMMENTED"), on: &request)
+        setJSONBody(eventJSON(type: "COMMENT_REPLIED"), on: &request)
       } afterResponse: { response in
         #expect(response.status == .unprocessableEntity)
       }

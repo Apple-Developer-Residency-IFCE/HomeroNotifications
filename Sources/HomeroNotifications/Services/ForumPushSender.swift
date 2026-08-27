@@ -14,7 +14,14 @@ struct ForumPushMessage: Equatable, Sendable {
   init(event: ForumEventDTO) {
     self.eventID = event.eventID
     self.title = "Homero"
-    self.body = "\(event.actor.name) curtiu seu topico"
+    self.body = switch event.type {
+    case .topicLiked:
+      "\(event.actor.name) curtiu seu topico"
+    case .topicCommented:
+      "\(event.actor.name) respondeu seu topico"
+    case .commentReplied, .commentLiked:
+      ""
+    }
     self.type = event.type
     self.topicID = event.target.topicID
   }
