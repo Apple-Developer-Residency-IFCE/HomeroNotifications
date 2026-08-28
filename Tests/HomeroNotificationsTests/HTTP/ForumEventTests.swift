@@ -43,7 +43,10 @@ struct ForumEventTests {
       try await registerDevice(on: app.db)
 
       try await app.testing().test(.POST, "/events/forum") { request in
-        setJSONBody(eventJSON(type: "TOPIC_COMMENTED"), on: &request)
+        setJSONBody(
+          eventJSON(type: "TOPIC_COMMENTED", commentID: commentID),
+          on: &request
+        )
       } afterResponse: { response in
         #expect(response.status == .accepted)
       }
@@ -52,6 +55,7 @@ struct ForumEventTests {
       #expect(send.message.body == "Kaique respondeu seu topico")
       #expect(send.message.type == .topicCommented)
       #expect(send.message.topicID == topicID)
+      #expect(send.message.commentID == commentID)
     }
   }
 
